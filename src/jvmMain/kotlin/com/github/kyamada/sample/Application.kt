@@ -1,3 +1,5 @@
+package com.github.kyamada.sample
+
 import com.github.kyamada.sample.database.DatabaseFactory
 import com.github.kyamada.sample.model.Env
 import com.github.kyamada.sample.model.exception.InternalServerErrorException
@@ -11,8 +13,6 @@ import io.ktor.http.content.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.serialization.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
 import kotlinx.html.*
 import mu.KotlinLogging
 import kotlin.collections.set
@@ -58,52 +58,54 @@ fun HTML.index() {
 
 fun main() {
     DatabaseFactory.init()
-    embeddedServer(Netty, port = 8080, host = "127.0.0.1") {
-        install(ContentNegotiation) {
-            json()
-        }
-        install(CORS) {
-            method(HttpMethod.Options)
-            method(HttpMethod.Get)
-            method(HttpMethod.Post)
-            method(HttpMethod.Put)
-            method(HttpMethod.Delete)
-            allowCredentials = true
-            allowNonSimpleContentTypes = true
-            when (Env.shortEnv) {
-                // local環境では異なるPORTでJSサーバを起動するため、JSサーバからのアクセスを許可する.
-                "local" -> anyHost()
-                else -> {
-                    // TODO: ドメイン が決まったらドメインを指定する
-                    anyHost()
-                }
+    io.ktor.server.netty.EngineMain.main(emptyArray())
+}
+
+fun Application.module() {
+    install(ContentNegotiation) {
+        json()
+    }
+    install(CORS) {
+        method(HttpMethod.Options)
+        method(HttpMethod.Get)
+        method(HttpMethod.Post)
+        method(HttpMethod.Put)
+        method(HttpMethod.Delete)
+        allowCredentials = true
+        allowNonSimpleContentTypes = true
+        when (Env.shortEnv) {
+            // local環境では異なるPORTでJSサーバを起動するため、JSサーバからのアクセスを許可する.
+            "local" -> anyHost()
+            else -> {
+                // TODO: ドメイン が決まったらドメインを指定する
+                anyHost()
             }
         }
-        install(Compression) {
-            gzip()
+    }
+    install(Compression) {
+        gzip()
+    }
+    install(StatusPages) {
+        exception<SystemException> { cause ->
+            if (cause is InternalServerErrorException) {
+                logger.error("SystemException", cause)
+            }
+            call.response.status(cause.status)
+            call.respond(cause.response())
         }
-        install(StatusPages) {
-            exception<SystemException> { cause ->
-                if (cause is InternalServerErrorException) {
-                    logger.error("SystemException", cause)
-                }
-                call.response.status(cause.status)
-                call.respond(cause.response())
+    }
+    routing {
+        route("/v1") {
+            get("/health") {
+                call.respond(HttpStatusCode.OK)
             }
+            tasks()
         }
-        routing {
-            route("/v1") {
-                get("/health") {
-                    call.respond(HttpStatusCode.OK)
-                }
-                tasks()
-            }
-            get("/") {
-                call.respondHtml(HttpStatusCode.OK, HTML::index)
-            }
-            static("/static") {
-                resources()
-            }
+        get("/") {
+            call.respondHtml(HttpStatusCode.OK, HTML::index)
         }
-    }.start(wait = true)
+        static("/static") {
+            resources()
+        }
+    }
 }

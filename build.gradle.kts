@@ -8,6 +8,7 @@ plugins {
     kotlin("multiplatform") version "1.4.21"
     application
     kotlin("plugin.serialization") version "1.4.10"
+    id("com.github.johnrengelman.shadow") version "4.0.4"
 }
 
 group = "kyamada"
@@ -127,7 +128,7 @@ kotlin {
 }
 
 application {
-    mainClassName = "ServerKt"
+    mainClassName = "com.github.kyamada.sample.ApplicationKt"
 }
 
 tasks.getByName<KotlinWebpack>("jsBrowserProductionWebpack") {
@@ -143,4 +144,15 @@ tasks.getByName<Jar>("jvmJar") {
 tasks.getByName<JavaExec>("run") {
     dependsOn(tasks.getByName<Jar>("jvmJar"))
     classpath(tasks.getByName<Jar>("jvmJar"))
+}
+
+// This task will generate your fat JAR and put it in the ./build/libs/ directory
+tasks.getByName<Jar>("shadowJar") {
+    dependsOn(tasks.getByName("jsBrowserProductionWebpack"))
+    val jsBrowserProductionWebpack = tasks.getByName<KotlinWebpack>("jsBrowserProductionWebpack")
+    from(File(jsBrowserProductionWebpack.destinationDirectory, jsBrowserProductionWebpack.outputFileName))
+
+    manifest {
+        attributes(mapOf("Main-Class" to application.mainClassName))
+    }
 }

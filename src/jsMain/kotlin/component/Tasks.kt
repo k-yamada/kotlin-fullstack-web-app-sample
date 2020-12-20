@@ -108,7 +108,6 @@ class Tasks : RComponent<RProps, TasksState>() {
                                 classes = mutableListOf("btn", "btn-outline-danger", "btn-sm")
                                 marginLeft = 10.pt
                             }
-                            //attrs.classes =
                             +"×"
                             attrs {
                                 onClickFunction = {
