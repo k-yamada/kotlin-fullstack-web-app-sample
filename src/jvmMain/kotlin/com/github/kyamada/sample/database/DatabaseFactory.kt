@@ -49,7 +49,7 @@ object DatabaseFactory {
         return if (Env.ENV == "test") {
             transaction { runBlocking { block() } }
         } else {
-            newSuspendedTransaction { block() }
+            newSuspendedTransaction(Dispatchers.IO) { block() }
         }
     }
 
